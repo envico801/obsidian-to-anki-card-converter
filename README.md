@@ -4,7 +4,7 @@
 
 ![Whomst_Has_Awakened_The_Anicent_One_Meme](https://github.com/envico801/obsidian-to-anki-card-converter/assets/132226893/2e6aa442-03d4-4b55-ba2c-06b36b208f95)
 
-It works in conjunction with [Obsidian](https://obsidian.md/) and the plugin to convert markdown files to letters, aka [Pseudonium/Obsidian_to_Anki](https://github.com/Pseudonium/Obsidian_to_Anki)
+It works in conjunction with [Obsidian](https://obsidian.md/) and the plugin to convert markdown files to flashcards, aka [Pseudonium/Obsidian_to_Anki](https://github.com/Pseudonium/Obsidian_to_Anki)
 
 ## How to run it
 
