@@ -43,7 +43,11 @@ function createQuestionFile(filePath, question, answer, deckData) {
   //const questionRegex =
   ///^P: ((?:.+\n)*)\n*R: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 
-  const content = `${question}  \n${answer}\n${prevId}\n\n${deckData}`;
+  //console.log(state);
+  const questionState = `QUESTION STATUS: ${
+    state === '' ? 'Safe to store' : 'Not safe to store'
+  }`;
+  const content = `${question}  \n${answer}\n${prevId}\n\n${deckData}\n${questionState}`;
   //const questionsCount = content.match(questionRegex);
   //console.log(questionsCount);
   //if (questionsCount > 1) {
@@ -89,7 +93,12 @@ fileContents = fs.readFileSync(filePath, 'utf8');
 
 try {
   const stateText = fs.readFileSync('./state.txt', 'utf8');
-  console.log(`State: ${stateText === 'null' ? 'Safe' : 'Not safe'}`);
+  console.log('=======================================');
+  console.log(
+    `|QUESTION STATUS: ${
+      stateText === 'null' ? 'Safe to store       |' : 'Not safe to store   |'
+    }`
+  );
 
   if (stateText === 'null') {
     state = '';
@@ -177,7 +186,7 @@ for (parentPath in questionsHash) {
     //break;
     //}
     const questionAndAnswer = question.split('R: ');
-    const answerText = `A: ${state}${questionAndAnswer.pop().trim()}`;
+    const answerText = `A: ${questionAndAnswer.pop().trim()}`;
     const questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
     qandAResolved += `${questionText}\n${answerText}\n\n`;
     //if (questionsAdded === 63) {
@@ -209,7 +218,9 @@ for (parentPath in questionsHash) {
 
 //console.log(questionsCreated);
 checkCreation(questionsCreated);
-console.log(`Questions added: ${questionsAdded - 1}`);
+console.log('=======================================');
+console.log(`|Questions added: ${questionsAdded - 1}                 |`);
+console.log('=======================================');
 fs.writeFileSync('qanda.md', qandAResolved);
 
 function addJumpLines(text) {
