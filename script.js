@@ -19,6 +19,7 @@ const targetDeckRegex =
   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
 const notALineBreakRegex = /^(?![^\S\r\n]*$).*$/gm;
+const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -80,6 +81,10 @@ function checkCreation(questionsArray) {
   fs.writeFileSync('./filePaths.txt', JSON.stringify(questionsArray));
 }
 
+function sanitizeFilename(filename) {
+  return filename.replace(notAlfaHyphenRegex, " ").trim()
+}
+
 // Read the text file path from command line arguments
 const args = process.argv.slice(2);
 const filePath = args[0];
@@ -118,6 +123,9 @@ if (!mainFolderName) {
   console.log('Main folder name not found!');
   process.exit(1);
 }
+//
+mainFolderName = sanitizeFilename(mainFolderName)
+mainFolderName = mainFolderName.replace(/ {2,}/gm, " ")
 
 parentRoute.pop();
 mainFolderName = path.join(parentRoute[0], parentRoute[1], mainFolderName);
@@ -133,7 +141,7 @@ const parts = fileContents.match(partRegex);
 const chaptersHash = {};
 const questionsHash = {};
 
-for (part of parts) {
+for (let part of parts) {
   const lines = part.split('\n');
   let partTitle = lines[0].substring(4).trim();
   let chaptersInPart = part.match(chapterRegex).join('\n\n');
@@ -148,8 +156,11 @@ for (part of parts) {
   invalidQuestions.push(chapterWithSepQuestions.replace(questionRegex, ''));
   const chapterContainsQuestion = chapterWithSepQuestions.match(questionRegex);
   if (!(chapterContainsQuestion === null)) {
-    chaptersHash[partTitle] = chaptersInPart;
     partTitle = partTitle.replace(/\//g, '-');
+    partTitle = sanitizeFilename(partTitle)
+    partTitle = partTitle.replace(/ {2,}/gm, " ")
+    partTitle = partTitle.substring(0,70)
+    chaptersHash[partTitle] = chaptersInPart;
     const parentPath = path.join(mainFolderName, partTitle);
     createDirectory(parentPath);
   }
@@ -157,19 +168,27 @@ for (part of parts) {
 
 //console.log(chaptersHash);
 
-fs.writeFileSync('./bad-questions.md', invalidQuestions.toString());
+fs.writeFileSync(
+  './bad-questions.md',
+  `# Bad questions\n${invalidQuestions
+    .toString()
+    .replace(/#### Chapter [0-9]+ - .*/g, '')}`
+);
 
 //fs.writeFileSync('./test.txt', JSON.stringify(chaptersHash, undefined, '\t'));
 
-for (partTitle in chaptersHash) {
+for (let partTitle in chaptersHash) {
   const chapters = chaptersHash[partTitle];
-  for (chapter of chapters) {
+  for (let chapter of chapters) {
     const lines = chapter.split('\n');
     let chapterTitle = lines[0].substring(5).trim();
     const questionsInChapter = chapter.match(questionRegex);
     const chapterContainsQuestion = chapter.match(questionRegex);
     if (!(chapterContainsQuestion === null)) {
       chapterTitle = chapterTitle.replace(/\//g, '-');
+      chapterTitle = sanitizeFilename(chapterTitle)
+      chapterTitle = chapterTitle.replace(/ {2,}/gm, " ")
+      chapterTitle = chapterTitle.substring(0,70)
       const parentPath = path.join(mainFolderName, partTitle, chapterTitle);
       createDirectory(parentPath);
       questionsHash[parentPath] = questionsInChapter ? questionsInChapter : [];
@@ -179,9 +198,9 @@ for (partTitle in chaptersHash) {
 
 //fs.writeFileSync('./tes.txt', JSON.stringify(chaptersHash, undefined, '\t'));
 
-for (parentPath in questionsHash) {
+for (let parentPath in questionsHash) {
   const questions = questionsHash[parentPath];
-  for (question of questions) {
+  for (let question of questions) {
     //if (questionsAdded > 5) {
     //break;
     //}
@@ -194,15 +213,20 @@ for (parentPath in questionsHash) {
     //console.log(typeof answerText);
     //console.log(questionText);
     //console.log(answerText);
-    //}
+    //}/
     let fileName = questionText
       .substring(3, 51)
-      .trim()
-      .replace(/[^a-zA-Z0-9]/g, '-')
+      // .trim()
+      // .replace(/[^a-zA-Z0-9]/g, '-')
       //.replace(/\//g, '-')
       .toLowerCase();
+
+    fileName = fileName.replace(/\//g, '-');
+    fileName = sanitizeFilename(fileName)
+    fileName = fileName.replace(/ {2,}/gm, " ")
+    let newFileName = fileName.charAt(0).toUpperCase() + fileName.slice(1);
     //fileName = fileName.substring(0, 51);
-    const filePath = path.join(parentPath, `${questionsAdded}-${fileName}.md`);
+    const filePath = path.join(parentPath, `${questionsAdded} - ${newFileName}.md`);
     //console.log(filePath);
 
     //console.log(parentPath);
@@ -230,16 +254,15 @@ function addJumpLines(text) {
 
     let questionText = questionAndAnswer[0];
     questionText = questionText.trim();
-    questionText = questionText.replace(/(  )$/gm, ``);
+    questionText = questionText.replace(/( {2})$/gm, ``);
     questionText = questionText.replace(/(\s*)$/gm, `  `);
 
     let answerText = questionAndAnswer[1];
-    answerText = answerText.replace(/(  )$/gm, ``);
+    answerText = answerText.replace(/( {2})$/gm, ``);
     answerText = answerText.replace(/(\s*)$/gm, `  `);
     answerText = answerText.trim();
 
-    const newQuestion = `${questionText}\nR: ${answerText}`;
-    return newQuestion;
+    return `${questionText}\nR: ${answerText}`;
   });
 
   return text;
