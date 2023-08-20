@@ -19,7 +19,9 @@ const targetDeckRegex =
   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
 const notALineBreakRegex = /^(?![^\S\r\n]*$).*$/gm;
-const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm
+const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm;
+// const tableRegex = /( *\n)*((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g;
+const tableRegex = /\n((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -88,8 +90,9 @@ function sanitizeFilename(filename) {
 // Read the text file path from command line arguments
 const args = process.argv.slice(2);
 const filePath = args[0];
-const parentRoute = filePath.split('/');
-console.log(filePath);
+let parentRoute = filePath.split('/');
+parentRoute.pop()
+parentRoute = parentRoute.join("/")
 
 // Read the file contents
 let fileContents = fs.readFileSync(filePath, 'utf8');
@@ -123,12 +126,11 @@ if (!mainFolderName) {
   console.log('Main folder name not found!');
   process.exit(1);
 }
-//
+
 mainFolderName = sanitizeFilename(mainFolderName)
 mainFolderName = mainFolderName.replace(/ {2,}/gm, " ")
 
-parentRoute.pop();
-mainFolderName = path.join(parentRoute[0], parentRoute[1], mainFolderName);
+mainFolderName = path.join(parentRoute, mainFolderName);
 //console.log(mainFolderName);
 
 createDirectory(mainFolderName);
@@ -205,8 +207,14 @@ for (let parentPath in questionsHash) {
     //break;
     //}
     const questionAndAnswer = question.split('R: ');
-    const answerText = `A: ${questionAndAnswer.pop().trim()}`;
+    let answerText = `A: ${questionAndAnswer.pop().trim()}`;
     const questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
+
+    const isTable = tableRegex.exec(answerText)
+    if (isTable) {
+      answerText = answerText.replace(tableRegex, '\n\n$1');
+    }
+
     qandAResolved += `${questionText}\n${answerText}\n\n`;
     //if (questionsAdded === 63) {
     //console.log(typeof questionText);
@@ -260,6 +268,12 @@ function addJumpLines(text) {
     let answerText = questionAndAnswer[1];
     answerText = answerText.replace(/( {2})$/gm, ``);
     answerText = answerText.replace(/(\s*)$/gm, `  `);
+
+    const isTable = tableRegex.exec(answerText)
+    if (isTable) {
+       answerText = answerText.replace(tableRegex, '\n\n$1');
+    }
+
     answerText = answerText.trim();
 
     return `${questionText}\nR: ${answerText}`;
