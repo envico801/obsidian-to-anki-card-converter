@@ -14,7 +14,7 @@ const partRegex =
 const chapterRegex =
   /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|$))/g;
 const questionRegex =
-  /^P: ((?:.+\n)*)\n*R: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
+  /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 const targetDeckRegex =
   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
@@ -22,6 +22,7 @@ const notALineBreakRegex = /^(?![^\S\r\n]*$).*$/gm;
 const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm;
 // const tableRegex = /( *\n)*((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g;
 const tableRegex = /\n((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g
+const markdownImageRegex =/(!\[.*?\]\()(\.{0,2}\/{0,1})(.*?)\/(.*?)\)/g
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -44,7 +45,7 @@ function createQuestionFile(filePath, question, answer, deckData) {
     //console.log(err);
   }
   //const questionRegex =
-  ///^P: ((?:.+\n)*)\n*R: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
+  ///^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 
   //console.log(state);
   const questionState = `QUESTION STATUS: ${
@@ -96,7 +97,10 @@ parentRoute = parentRoute.join("/")
 
 // Read the file contents
 let fileContents = fs.readFileSync(filePath, 'utf8');
+
 fs.writeFileSync(filePath, addJumpLines(fileContents));
+fs.writeFileSync(filePath, convertImages(fileContents));
+
 fileContents = fs.readFileSync(filePath, 'utf8');
 
 try {
@@ -151,7 +155,7 @@ for (let part of parts) {
     .match(notALineBreakRegex)
     .join('\n');
   const chapterWithSepQuestions = chapterWithoutLineBreaks
-    .replace(/P: /g, '\nP: ')
+    .replace(/Q:: /g, '\nQ:: ')
     .replace(/#### Chapter/g, '\n#### Chapter')
     .replace(/### Part/g, '\n### Part');
   chaptersInPart = chapterWithSepQuestions.match(chapterRegex);
@@ -201,14 +205,31 @@ for (let partTitle in chaptersHash) {
 //fs.writeFileSync('./tes.txt', JSON.stringify(chaptersHash, undefined, '\t'));
 
 for (let parentPath in questionsHash) {
+  // let counter = 1
   const questions = questionsHash[parentPath];
   for (let question of questions) {
-    //if (questionsAdded > 5) {
-    //break;
-    //}
-    const questionAndAnswer = question.split('R: ');
+    // if (questionsAdded > 370) {
+    // break;
+    // }
+    const questionAndAnswer = question.split('A:: ');
     let answerText = `A: ${questionAndAnswer.pop().trim()}`;
     const questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
+
+
+    // console.log(answerText)
+
+    const containsImage = answerText.match(markdownImageRegex)
+    if (containsImage) {
+      // console.log(containsImage)
+      // counter++
+      answerText = answerText.replace(markdownImageRegex, (match, p1, p2, p3, p4) => {
+        const dynamicText = p4.split('.').shift(); // Extract the text and remove file extension
+        const relativePath = "../../../../" + (p3 ? p3 + "/" : "") + p4;
+        return `![${dynamicText}](${relativePath})`;
+      });
+      // console.log("++++++++++++++++++++++++++++++++++++++++++++++")
+      // console.log(test)
+    }
 
     const isTable = tableRegex.exec(answerText)
     if (isTable) {
@@ -256,9 +277,10 @@ console.log('=======================================');
 fs.writeFileSync('qanda.md', qandAResolved);
 
 function addJumpLines(text) {
+  // let count = 1
   text = text.replace(questionRegex, (selectedText) => {
     const question = selectedText.match(questionRegex)[0];
-    const questionAndAnswer = question.split('R: ');
+    const questionAndAnswer = question.split('A:: ');
 
     let questionText = questionAndAnswer[0];
     questionText = questionText.trim();
@@ -266,6 +288,7 @@ function addJumpLines(text) {
     questionText = questionText.replace(/(\s*)$/gm, `  `);
 
     let answerText = questionAndAnswer[1];
+
     answerText = answerText.replace(/( {2})$/gm, ``);
     answerText = answerText.replace(/(\s*)$/gm, `  `);
 
@@ -276,8 +299,28 @@ function addJumpLines(text) {
 
     answerText = answerText.trim();
 
-    return `${questionText}\nR: ${answerText}`;
+    // if (count === 9) {
+    //  console.log(`${questionText}\nA:: ${answerText}`)
+    //}
+
+    //count++
+
+    return `${questionText}\nA:: ${answerText}`;
   });
 
   return text;
+}
+
+function convertImages (text) {
+  const containsImage = text.match(markdownImageRegex)
+
+  if (containsImage) {
+    text = text.replace(markdownImageRegex, (match, p1, p2, p3, p4) => {
+      const dynamicText = p4.split('.').shift(); // Extract the text and remove file extension
+      const relativePath = "../" + (p3 ? p3 + "/" : "") + p4;
+      return `![${dynamicText}](${relativePath})`;
+    });
+  }
+
+  return text
 }
