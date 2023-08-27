@@ -9,12 +9,9 @@ let qandAResolved = `\n`;
 const mainFolderRegex = /^# (.+)/;
 //const partRegex =
 ///### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\n---\n|\Z)/g;
-const partRegex =
-  /### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\n---\n)/g;
-const chapterRegex =
-  /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|$))/g;
-const questionRegex =
-  /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
+const partRegex = /### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\n---\n)/g;
+const chapterRegex = /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|$))/g;
+const questionRegex = /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 const targetDeckRegex =
   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
@@ -23,6 +20,19 @@ const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm;
 // const tableRegex = /( *\n)*((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g;
 const tableRegex = /\n((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g
 const markdownImageRegex =/(!\[.*?\]\()(\.{0,2}\/{0,1})(.*?)\/(.*?)\)/g
+const obsidianIdRegex = /<!--ID: [0-9]+-->/g;
+//const questionRegex =
+///^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
+const multipleSpacesRegex = / {2,}/gm
+const questionStartRegex = /Q:: /g
+const chapterStartRegex = /#### Chapter/g
+const partStartRegex = /### Part/g
+const diagonalCharRegex = /\//g
+const chapterTitleRegex = /#### Chapter [0-9]+ - .*/g
+const codeBlockStart = /```[A-Za-z0-9]+\s\s/g
+const nonAlfaNumRegex = /[^a-zA-Z0-9]/g
+const doubleSpaceRegex = /( {2})$/gm
+const endOfLineRegex = /(\s*)$/gm
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -35,7 +45,6 @@ function createDirectory(dirPath) {
 function createQuestionFile(filePath, question, answer, deckData) {
   //const content = `# Question\n\n${question}\n\n# Answer\n\n${answer}`;
   let prevId = '';
-  const obsidianIdRegex = /<!--ID: [0-9]+-->/g;
 
   try {
     const prevQuestion = fs.readFileSync(filePath, 'utf8');
@@ -44,8 +53,6 @@ function createQuestionFile(filePath, question, answer, deckData) {
   } catch (err) {
     //console.log(err);
   }
-  //const questionRegex =
-  ///^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 
   //console.log(state);
   const questionState = `QUESTION STATUS: ${
@@ -72,7 +79,7 @@ function createQuestionFile(filePath, question, answer, deckData) {
   questionsCreated.push(filePath);
 }
 
-function checkCreation(questionsArray) {
+// function checkCreation(questionsArray) {
   //let resultOfResults = '';
   //for (repath of questionsArray) {
   //const result = fs.readFileSync(repath, 'utf8');
@@ -81,8 +88,8 @@ function checkCreation(questionsArray) {
   //resultOfResults += '==============================';
   //resultOfResults += result;
   //}
-  fs.writeFileSync('./filePaths.txt', JSON.stringify(questionsArray));
-}
+  // fs.writeFileSync('./filePaths.txt', JSON.stringify(questionsArray));
+// }
 
 function sanitizeFilename(filename) {
   return filename.replace(notAlfaHyphenRegex, " ").trim()
@@ -132,7 +139,7 @@ if (!mainFolderName) {
 }
 
 mainFolderName = sanitizeFilename(mainFolderName)
-mainFolderName = mainFolderName.replace(/ {2,}/gm, " ")
+mainFolderName = mainFolderName.replace(multipleSpacesRegex, " ")
 
 mainFolderName = path.join(parentRoute, mainFolderName);
 //console.log(mainFolderName);
@@ -155,16 +162,16 @@ for (let part of parts) {
     .match(notALineBreakRegex)
     .join('\n');
   const chapterWithSepQuestions = chapterWithoutLineBreaks
-    .replace(/Q:: /g, '\nQ:: ')
-    .replace(/#### Chapter/g, '\n#### Chapter')
-    .replace(/### Part/g, '\n### Part');
+    .replace(questionStartRegex, '\nQ:: ')
+    .replace(chapterStartRegex, '\n#### Chapter')
+    .replace(partStartRegex, '\n### Part');
   chaptersInPart = chapterWithSepQuestions.match(chapterRegex);
   invalidQuestions.push(chapterWithSepQuestions.replace(questionRegex, ''));
   const chapterContainsQuestion = chapterWithSepQuestions.match(questionRegex);
   if (!(chapterContainsQuestion === null)) {
-    partTitle = partTitle.replace(/\//g, '-');
+    partTitle = partTitle.replace(diagonalCharRegex, '-');
     partTitle = sanitizeFilename(partTitle)
-    partTitle = partTitle.replace(/ {2,}/gm, " ")
+    partTitle = partTitle.replace(multipleSpacesRegex, " ")
     partTitle = partTitle.substring(0,70)
     chaptersHash[partTitle] = chaptersInPart;
     const parentPath = path.join(mainFolderName, partTitle);
@@ -178,8 +185,9 @@ fs.writeFileSync(
   './bad-questions.md',
   `# Bad questions\n${invalidQuestions
     .toString()
-    .replace(/#### Chapter [0-9]+ - .*/g, '')}`
+    .replace(chapterTitleRegex, '')}`
 );
+
 
 //fs.writeFileSync('./test.txt', JSON.stringify(chaptersHash, undefined, '\t'));
 
@@ -191,9 +199,9 @@ for (let partTitle in chaptersHash) {
     const questionsInChapter = chapter.match(questionRegex);
     const chapterContainsQuestion = chapter.match(questionRegex);
     if (!(chapterContainsQuestion === null)) {
-      chapterTitle = chapterTitle.replace(/\//g, '-');
+      chapterTitle = chapterTitle.replace(diagonalCharRegex, '-');
       chapterTitle = sanitizeFilename(chapterTitle)
-      chapterTitle = chapterTitle.replace(/ {2,}/gm, " ")
+      chapterTitle = chapterTitle.replace(multipleSpacesRegex, " ")
       chapterTitle = chapterTitle.substring(0,70)
       const parentPath = path.join(mainFolderName, partTitle, chapterTitle);
       createDirectory(parentPath);
@@ -236,6 +244,12 @@ for (let parentPath in questionsHash) {
       answerText = answerText.replace(tableRegex, '\n\n$1');
     }
 
+
+
+    answerText = answerText.replace(codeBlockStart, (matchText) => {
+      return `${matchText.trim()}`
+    })
+
     qandAResolved += `${questionText}\n${answerText}\n\n`;
     //if (questionsAdded === 63) {
     //console.log(typeof questionText);
@@ -243,16 +257,17 @@ for (let parentPath in questionsHash) {
     //console.log(questionText);
     //console.log(answerText);
     //}/
+
     let fileName = questionText
       .substring(3, 51)
       // .trim()
-      // .replace(/[^a-zA-Z0-9]/g, '-')
-      //.replace(/\//g, '-')
+      // .replace(nonAlfaNumRegex, '-')
+      //.replace(diagonalCharRegex, '-')
       .toLowerCase();
 
-    fileName = fileName.replace(/\//g, '-');
+    fileName = fileName.replace(diagonalCharRegex, '-');
     fileName = sanitizeFilename(fileName)
-    fileName = fileName.replace(/ {2,}/gm, " ")
+    fileName = fileName.replace(multipleSpacesRegex, " ")
     let newFileName = fileName.charAt(0).toUpperCase() + fileName.slice(1);
     //fileName = fileName.substring(0, 51);
     const filePath = path.join(parentPath, `${questionsAdded} - ${newFileName}.md`);
@@ -270,11 +285,11 @@ for (let parentPath in questionsHash) {
 }
 
 //console.log(questionsCreated);
-checkCreation(questionsCreated);
+// checkCreation(questionsCreated);
 console.log('=======================================');
 console.log(`|Questions added: ${questionsAdded - 1}                 |`);
 console.log('=======================================');
-fs.writeFileSync('qanda.md', qandAResolved);
+// fs.writeFileSync('qanda.md', qandAResolved);
 
 function addJumpLines(text) {
   // let count = 1
@@ -283,14 +298,15 @@ function addJumpLines(text) {
     const questionAndAnswer = question.split('A:: ');
 
     let questionText = questionAndAnswer[0];
+
     questionText = questionText.trim();
-    questionText = questionText.replace(/( {2})$/gm, ``);
-    questionText = questionText.replace(/(\s*)$/gm, `  `);
+    questionText = questionText.replace(doubleSpaceRegex, ``);
+    questionText = questionText.replace(endOfLineRegex, `  `);
 
     let answerText = questionAndAnswer[1];
 
-    answerText = answerText.replace(/( {2})$/gm, ``);
-    answerText = answerText.replace(/(\s*)$/gm, `  `);
+    answerText = answerText.replace(doubleSpaceRegex, ``);
+    answerText = answerText.replace(endOfLineRegex, `  `);
 
     const isTable = tableRegex.exec(answerText)
     if (isTable) {
@@ -298,6 +314,9 @@ function addJumpLines(text) {
     }
 
     answerText = answerText.trim();
+
+
+    // console.log(test)
 
     // if (count === 9) {
     //  console.log(`${questionText}\nA:: ${answerText}`)
