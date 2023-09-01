@@ -29,10 +29,12 @@ const chapterStartRegex = /#### Chapter/g
 const partStartRegex = /### Part/g
 const diagonalCharRegex = /\//g
 const chapterTitleRegex = /#### Chapter [0-9]+ - .*/g
-const codeBlockStart = /```[A-Za-z0-9]+\s\s/g
+const codeBlockStart = /```[A-Za-z0-9]+  /g
+const codeBlockEnd = /```  /g
 const nonAlfaNumRegex = /[^a-zA-Z0-9]/g
 const doubleSpaceRegex = /( {2})$/gm
 const endOfLineRegex = /(\s*)$/gm
+const lastWordRegex = /[^\s]+$/gm;
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -44,12 +46,16 @@ function createDirectory(dirPath) {
 // Function to create a question markdown file
 function createQuestionFile(filePath, question, answer, deckData) {
   //const content = `# Question\n\n${question}\n\n# Answer\n\n${answer}`;
-  let prevId = '';
+  let prevId = "";
 
   try {
     const prevQuestion = fs.readFileSync(filePath, 'utf8');
-    const id = obsidianIdRegex.exec(prevQuestion);
-    prevId = id[0];
+    // const id = obsidianIdRegex.exec(prevQuestion);
+    prevId = prevQuestion.match(obsidianIdRegex)[0] || "";
+    if (prevId !== "") {
+      prevId = `${prevId}\n`
+    }
+    // prevId = id[0];
   } catch (err) {
     //console.log(err);
   }
@@ -58,7 +64,7 @@ function createQuestionFile(filePath, question, answer, deckData) {
   const questionState = `QUESTION STATUS: ${
     state === '' ? 'Safe to store' : 'Not safe to store'
   }`;
-  const content = `${question}  \n${answer}\n${prevId}\n\n${deckData}\n${questionState}`;
+  const content = `${question}  \n${answer}\n${prevId}\n${deckData}\n\n${questionState}`;
   //const questionsCount = content.match(questionRegex);
   //console.log(questionsCount);
   //if (questionsCount > 1) {
@@ -104,11 +110,7 @@ parentRoute = parentRoute.join("/")
 
 // Read the file contents
 let fileContents = fs.readFileSync(filePath, 'utf8');
-
-fs.writeFileSync(filePath, addJumpLines(fileContents));
-fs.writeFileSync(filePath, convertImages(fileContents));
-
-fileContents = fs.readFileSync(filePath, 'utf8');
+fileContents = addJumpLines(fileContents);
 
 try {
   const stateText = fs.readFileSync('./state.txt', 'utf8');
@@ -250,6 +252,10 @@ for (let parentPath in questionsHash) {
       return `${matchText.trim()}`
     })
 
+    answerText = answerText.replace(codeBlockEnd, (matchText) => {
+      return `${matchText.trim()}`
+    })
+
     qandAResolved += `${questionText}\n${answerText}\n\n`;
     //if (questionsAdded === 63) {
     //console.log(typeof questionText);
@@ -291,7 +297,17 @@ console.log(`|Questions added: ${questionsAdded - 1}                 |`);
 console.log('=======================================');
 // fs.writeFileSync('qanda.md', qandAResolved);
 
+// fs.writeFileSync(filePath, fileContents, { flag: 'w' });
+
+fs.writeFile(filePath, fileContents, function(err) {
+  if(err) {
+    return console.log(err);
+  }
+  console.log("The file was saved!");
+});
+
 function addJumpLines(text) {
+  text = convertImages(text)
   // let count = 1
   text = text.replace(questionRegex, (selectedText) => {
     const question = selectedText.match(questionRegex)[0];
@@ -302,11 +318,13 @@ function addJumpLines(text) {
     questionText = questionText.trim();
     questionText = questionText.replace(doubleSpaceRegex, ``);
     questionText = questionText.replace(endOfLineRegex, `  `);
+    // questionText = questionText.replace(lastWordRegex, match => `${match}  `);
 
     let answerText = questionAndAnswer[1];
 
     answerText = answerText.replace(doubleSpaceRegex, ``);
     answerText = answerText.replace(endOfLineRegex, `  `);
+    // answerText = answerText.replace(lastWordRegex, match => `${match}  `);
 
     const isTable = tableRegex.exec(answerText)
     if (isTable) {
