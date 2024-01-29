@@ -72,7 +72,7 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
     indexTable += divider
     prevChapterCount = chapterNum
   }
-  let textForTable = `| [${questionsAdded}](#id-${questionsAdded}) | [${fileName}](./${shortFilePath}) | ${partNum} | ${chapterNum} |\n`
+  let textForTable = `| [${questionsAdded}](#id${questionsAdded}) | [${fileName}](./${shortFilePath}) | ${partNum} | ${chapterNum} |\n`
   indexTable += textForTable
 
   try {
@@ -141,8 +141,12 @@ fileContents = removeMarkdownIndentation(fileContents);
 
 const divider45 = "=============================================  "
 
-fileContents = fileContents.replace(/={45} {2}\n*(#{5} )*\s*/g, '')
-fileContents = fileContents.replace(/#{6} ID \d*\s*/g, '')
+fileContents = fileContents.replace(/={45} *\n*(#{5} )*\s*/g, '')
+// fs.writeFileSync(
+//     "./filecontent.md",
+//     fileContents
+// )
+fileContents = fileContents.replace(/#{6} ID\d*\s*/g, '')
 
 fileContents = addJumpLines(fileContents);
 
@@ -259,7 +263,7 @@ for (let parentPath in questionsHash) {
     let answerText = `A: ${questionAndAnswer.pop().trim()}`;
     let questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
 
-    questionText = questionText.replace(/#{6} ID \d*\s*/g, '')
+    questionText = questionText.replace(/#{6} ID\d*\s*/g, '')
     const forFilename = questionText.replace(/={45} {2}\n\s*/g,"")
 
     // questionText = questionText.trim();
@@ -369,6 +373,10 @@ function addJumpLines(text) {
     const questionAndAnswer = question.split('A:: ');
 
     let questionText = questionAndAnswer[0];
+    // if (count === 1) {
+    //   console.log(questionText)
+    // }
+
     let doubleSpaceRegexCustom = /( *)$/gm;
 
     questionText = questionText.trim();
@@ -386,6 +394,10 @@ function addJumpLines(text) {
     // questionText = questionText.replace(lastWordRegex, match => `${match}  `);
 
     let answerText = questionAndAnswer[1];
+      // if (count === 1) {
+      //   console.log(answerText)
+      // }
+
     // if (count === 1) {
     //   console.log('=====================================')
     //   console.log(answerText)
@@ -414,9 +426,13 @@ function addJumpLines(text) {
     //}
 
     //count++
+    // if (count === 1) {
+    //   console.log(questionText)
+    //   ++count
+    // }
 
     questionText = questionText.substring(4)
-    const id = `###### ID ${count++}`
+    const id = `###### ID${count++}`
     const returned = `Q:: ${divider45}\n\n##### ${questionText}\n${id}\n\nA:: ${divider45}\n${answerText}`
     // console.log(divider45)
     // console.log(returned)
