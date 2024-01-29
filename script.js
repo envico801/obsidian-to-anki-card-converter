@@ -56,10 +56,12 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
 
   const pathArray = filePath.split("/").slice(2)
   const shortFilePath = pathArray.join("/").replaceAll(" ", "%20")
-  const partArr = pathArray[1].substring(4).split("-")
+  const partRaw = pathArray[1]
+  const partArr = partRaw.substring(4).split("-")
   const partNum = romanToNumber(partArr[0].trim())
   const partTitle = partArr[1].trim()
-  const chapterArr = pathArray[2].substring(7).split("-")
+  const chapterRaw = pathArray[2]
+  const chapterArr = chapterRaw.substring(7).split("-")
   const chapterNum = parseInt(chapterArr[0].trim())
   const chapterTitle = chapterArr[1].trim()
   if (partNum !== prevPartCount) {
@@ -91,7 +93,15 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
   const questionState = `QUESTION STATUS: ${
     state === '' ? 'Safe to store' : 'Not safe to store'
   }`;
-  const content = `${question}  \n${answer}\n${prevId}\n${deckData}\n\n${questionState}`;
+
+  const fixPart = partRaw.replaceAll(" ", "-").replaceAll("---","-")
+  const fixChapter = chapterRaw.replaceAll(" ", "-").replaceAll("---","-")
+  const fixMainTitle = pathArray[0].replaceAll(" ", "-").replaceAll("---","-")
+  const fixFileName = fileName.replaceAll(" ", "-").replaceAll("---","-")
+  const deckDataPlusId = deckData.replace(/(FILE TAGS:.*)/g, `$1::#${fixMainTitle}::#${fixPart}::#${fixChapter}::#${questionsAdded}-${fixFileName}`)
+
+
+  const content = `${question}  \n${answer}\n${prevId}\n${deckDataPlusId}\n\n${questionState}`;
   //const questionsCount = content.match(questionRegex);
   //console.log(questionsCount);
   //if (questionsCount > 1) {
@@ -265,6 +275,8 @@ for (let parentPath in questionsHash) {
 
     questionText = questionText.replace(/#{6} ID\d*\s*/g, '')
     const forFilename = questionText.replace(/={45} {2}\n\s*/g,"")
+    questionText = questionText.replace(/={45} {2}\n\s*##/g,"  \n")
+    answerText = answerText.replace(/={45} {2}\n\s*/g,"  \n")
 
     // questionText = questionText.trim();
     questionText = questionText.replace(doubleSpaceRegex, ``);
