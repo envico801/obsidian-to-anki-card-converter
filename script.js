@@ -11,15 +11,18 @@ const mainFolderRegex = /^# (.+)/;
 ///### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\n---\n|\Z)/g;
 const partRegex = /### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\n---\n)/g;
 const chapterRegex = /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|$))/g;
-const questionRegex = /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
-const targetDeckRegex =
-  /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
+// const questionRegex = /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
+const questionRegex = /^Q:: ((?:(?!A::)[\s\S])+)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm
+// const targetDeckRegex =
+//   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
+const targetDeckRegex = /TARGET DECK: ((\w( *|-*))*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
 const notALineBreakRegex = /^(?![^\S\r\n]*$).*$/gm;
 const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm;
 // const tableRegex = /( *\n)*((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g;
 const tableRegex = /\n((?:.*\|.*\n)(?:.*\|.*\n)(?:.*\|.*\n)+)/g
-const markdownImageRegex =/(!\[.*?\]\()(\.{0,2}\/{0,1})(.*?)\/(.*?)\)/g
+// const markdownImageRegex = /(!\[.*?\]\()(\.{0,2}\/{0,1})(.*?)\/(.*?)\)/g
+const markdownImageRegex = /(!\[.*?\]\()(\.{0,2}\/{0,1})?((?!https?:\/\/)[^\/]*?)\/(.*?)\)/g
 const obsidianIdRegex = /<!--ID: [0-9]+-->/g;
 //const questionRegex =
 ///^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
@@ -29,12 +32,15 @@ const chapterStartRegex = /#### Chapter/g
 const partStartRegex = /### Part/g
 const diagonalCharRegex = /\//g
 const chapterTitleRegex = /#### Chapter [0-9]+ - .*/g
-const codeBlockStart = /```[A-Za-z0-9]+  /g
-const codeBlockEnd = /```  /g
+const codeBlockStart = / *```[A-Za-z0-9]+(  )*/g
+const codeBlockEnd = / *```(  )*/g
 const nonAlfaNumRegex = /[^a-zA-Z0-9]/g
-const doubleSpaceRegex = /( {2})$/gm
+const doubleSpaceRegex = /(\?* {2})$/gm
 const endOfLineRegex = /(\s*)$/gm
 const lastWordRegex = /[^\s]+$/gm;
+let indexTable = `\n| ID | File name / path | Part | Chapter |\n| --- | --- | --- | --- |\n`
+let prevPartCount = 0
+let prevChapterCount = 0
 
 // Function to recursively create directories
 function createDirectory(dirPath) {
@@ -44,9 +50,30 @@ function createDirectory(dirPath) {
 }
 
 // Function to create a question markdown file
-function createQuestionFile(filePath, question, answer, deckData) {
+function createQuestionFile(filePath, question, answer, deckData, fileName) {
   //const content = `# Question\n\n${question}\n\n# Answer\n\n${answer}`;
   let prevId = "";
+
+  const pathArray = filePath.split("/").slice(2)
+  const shortFilePath = pathArray.join("/").replaceAll(" ", "%20")
+  const partArr = pathArray[1].substring(4).split("-")
+  const partNum = romanToNumber(partArr[0].trim())
+  const partTitle = partArr[1].trim()
+  const chapterArr = pathArray[2].substring(7).split("-")
+  const chapterNum = parseInt(chapterArr[0].trim())
+  const chapterTitle = chapterArr[1].trim()
+  if (partNum !== prevPartCount) {
+    let divider = `| **-** | **${partTitle}** | **${partNum}** | **-** |\n`
+    indexTable += divider
+    prevPartCount = partNum
+  }
+  if (chapterNum !== prevChapterCount) {
+    let divider = `| **-** | **${partTitle} > ${chapterTitle}** | **${partNum}** | **${chapterNum}** |\n`
+    indexTable += divider
+    prevChapterCount = chapterNum
+  }
+  let textForTable = `| [${questionsAdded}](#id-${questionsAdded}) | [${fileName}](./${shortFilePath}) | ${partNum} | ${chapterNum} |\n`
+  indexTable += textForTable
 
   try {
     const prevQuestion = fs.readFileSync(filePath, 'utf8');
@@ -110,6 +137,13 @@ parentRoute = parentRoute.join("/")
 
 // Read the file contents
 let fileContents = fs.readFileSync(filePath, 'utf8');
+fileContents = removeMarkdownIndentation(fileContents);
+
+const divider45 = "=============================================  "
+
+fileContents = fileContents.replace(/={45} {2}\n*(#{5} )*\s*/g, '')
+fileContents = fileContents.replace(/#{6} ID \d*\s*/g, '')
+
 fileContents = addJumpLines(fileContents);
 
 try {
@@ -218,12 +252,29 @@ for (let parentPath in questionsHash) {
   // let counter = 1
   const questions = questionsHash[parentPath];
   for (let question of questions) {
-    // if (questionsAdded > 370) {
+    // if (questionsAdded > 1) {
     // break;
     // }
     const questionAndAnswer = question.split('A:: ');
     let answerText = `A: ${questionAndAnswer.pop().trim()}`;
-    const questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
+    let questionText = `Q: ${questionAndAnswer.pop().substring(3).trim()}`;
+
+    questionText = questionText.replace(/#{6} ID \d*\s*/g, '')
+    const forFilename = questionText.replace(/={45} {2}\n\s*/g,"")
+
+    // questionText = questionText.trim();
+    questionText = questionText.replace(doubleSpaceRegex, ``);
+    questionText = questionText.replace(endOfLineRegex, `  `);
+    questionText = questionText.trim();
+
+    // if (questionsAdded === 1) {
+      answerText = answerText.replace(doubleSpaceRegex, ``);
+      answerText = answerText.replace(endOfLineRegex, `  `);
+      // answerText = answerText.replace(lastWordRegex, match => `${match}  `);
+
+
+    // }
+
 
 
     // console.log(answerText)
@@ -256,6 +307,8 @@ for (let parentPath in questionsHash) {
       return `${matchText.trim()}`
     })
 
+    answerText = answerText.trim();
+
     qandAResolved += `${questionText}\n${answerText}\n\n`;
     //if (questionsAdded === 63) {
     //console.log(typeof questionText);
@@ -264,7 +317,8 @@ for (let parentPath in questionsHash) {
     //console.log(answerText);
     //}/
 
-    let fileName = questionText
+
+    let fileName = forFilename
       .substring(3, 51)
       // .trim()
       // .replace(nonAlfaNumRegex, '-')
@@ -286,12 +340,13 @@ for (let parentPath in questionsHash) {
     const currentDeck = `${targetDeckInfo}::${part}::${chapter}`;
     const fullDeckInfo = deckInfo.replace(targetDeckRegex, currentDeck);
 
-    createQuestionFile(filePath, questionText, answerText, fullDeckInfo);
+    createQuestionFile(filePath, questionText, answerText, fullDeckInfo, newFileName);
   }
 }
 
 //console.log(questionsCreated);
 // checkCreation(questionsCreated);
+fileContents = fileContents.replace(/## Questions([\s\S]*?)### Part/, `## Questions\n${indexTable}\n### Part`)
 console.log('=======================================');
 console.log(`|Questions added: ${questionsAdded - 1}                 |`);
 console.log('=======================================');
@@ -308,19 +363,35 @@ fs.writeFile(filePath, fileContents, function(err) {
 
 function addJumpLines(text) {
   text = convertImages(text)
-  // let count = 1
+  let count = 1
   text = text.replace(questionRegex, (selectedText) => {
     const question = selectedText.match(questionRegex)[0];
     const questionAndAnswer = question.split('A:: ');
 
     let questionText = questionAndAnswer[0];
+    let doubleSpaceRegexCustom = /( *)$/gm;
 
     questionText = questionText.trim();
-    questionText = questionText.replace(doubleSpaceRegex, ``);
-    questionText = questionText.replace(endOfLineRegex, `  `);
+    questionText = questionText.replace(doubleSpaceRegexCustom, ``);
+    //
+    let includeQuestionMark = "?"
+    const questionTextLastChar = questionText[questionText.length-1]
+    if (questionTextLastChar === "?") {
+      includeQuestionMark = ""
+    }
+    questionText.trim()
+    questionText += `${includeQuestionMark}\n`
+    questionText = questionText.replace(/(.+)$/gm, "$1  ");
+
     // questionText = questionText.replace(lastWordRegex, match => `${match}  `);
 
     let answerText = questionAndAnswer[1];
+    // if (count === 1) {
+    //   console.log('=====================================')
+    //   console.log(answerText)
+    //   console.log('=====================================')
+    //   count++
+    // }
 
     answerText = answerText.replace(doubleSpaceRegex, ``);
     answerText = answerText.replace(endOfLineRegex, `  `);
@@ -330,6 +401,8 @@ function addJumpLines(text) {
     if (isTable) {
        answerText = answerText.replace(tableRegex, '\n\n$1');
     }
+
+    // answerText = answerText.replace(/A::( -*-)*/g, 'A:: -*-\n')
 
     answerText = answerText.trim();
 
@@ -342,7 +415,13 @@ function addJumpLines(text) {
 
     //count++
 
-    return `${questionText}\nA:: ${answerText}`;
+    questionText = questionText.substring(4)
+    const id = `###### ID ${count++}`
+    const returned = `Q:: ${divider45}\n\n##### ${questionText}\n${id}\n\nA:: ${divider45}\n${answerText}`
+    // console.log(divider45)
+    // console.log(returned)
+
+    return returned;
   });
 
   return text;
@@ -360,4 +439,63 @@ function convertImages (text) {
   }
 
   return text
+}
+
+function removeMarkdownIndentation(markdownText) {
+  // Regular expression to match code blocks in Markdown
+  let codeBlockRegex = /```[\s\S]+?```/g;
+
+  // Extract code blocks from the Markdown text
+  let codeBlocks = markdownText.match(codeBlockRegex) || [];
+
+  // Replace indentation for non-code block lines
+  let lines = markdownText.split('\n').map(function(line) {
+    // Ignore lines that are part of code blocks
+    if (codeBlocks.some(function(codeBlock) {
+      return codeBlock.includes(line.trim());
+    })) {
+      line = line.replace(codeBlockStart, (matchText) => {
+        return `${matchText.trim()}`
+      })
+
+      line = line.replace(codeBlockEnd, (matchText) => {
+        return `${matchText.trim()}`
+      })
+
+      return line; // Return unchanged line for code blocks
+    }
+    // Remove indentation for non-code block lines
+    return line.replace(/^\s*/, ''); // Assuming multiples whitespaces indentation
+  });
+
+  // Join lines and return the modified Markdown text
+  return lines.join('\n');
+}
+
+function romanToNumber(roman) {
+  const romanNumerals = {
+    'I': 1,
+    'V': 5,
+    'X': 10,
+    'L': 50,
+    'C': 100,
+    'D': 500,
+    'M': 1000
+  };
+
+  let result = 0;
+  let prevValue = 0;
+
+  for (let i = roman.length - 1; i >= 0; i--) {
+    let currentValue = romanNumerals[roman[i]];
+
+    if (currentValue < prevValue) {
+      result -= currentValue;
+    } else {
+      result += currentValue;
+    }
+    prevValue = currentValue;
+  }
+
+  return result;
 }
