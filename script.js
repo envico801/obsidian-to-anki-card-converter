@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const prettier = require('prettier');
 let state = null; // "" = "Saved"
 let questionsAdded = 1;
 let questionsCreated = [];
@@ -47,6 +48,32 @@ function createDirectory(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath);
   }
+}
+
+async function createQuestionAsync(content, filePath) {
+  const formattedContent = await prettier.format(content, {
+    experimentalTernaries: true,
+    printWidth: 80,
+    tabWidth: 2,
+    useTabs: false,
+    semi: true,
+    singleQuote: true,
+    quoteProps: "consistent",
+    jsxSingleQuote: true,
+    trailingComma: "all",
+    bracketSpacing: true,
+    bracketSameLine: false,
+    arrowParens: "always",
+    parser: 'markdown',
+    proseWrap: "always",
+    htmlWhitespaceSensitivity: "css",
+    vueIndentScriptAndStyle: false,
+    embeddedLanguageFormatting: "auto",
+    singleAttributePerLine: false
+  });
+
+  // fs.writeFileSync(filePath, formattedContent, 'utf-8');
+  await fs.promises.writeFile(filePath, formattedContent);
 }
 
 // Function to create a question markdown file
@@ -108,13 +135,17 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
   //console.log(questionsCount);
   //}
   //console.log(filePath);
-  fs.writeFileSync(filePath, content);
+
+  createQuestionAsync(content,filePath)
+
   //fs.writeFile(filePath, content, { flag: 'w' }, function (err) {
   //if (err) return console.error(err);
   //fs.readFile(filePath, 'utf-8', function (err, data) {
   //if (err) return console.error(err);
   //console.log(data);
+
   questionsAdded++;
+
   //console.log(`N: ${questionsAdded} - ${question}`);
   //console.log('---');
   //});
