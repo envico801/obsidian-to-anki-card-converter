@@ -51,7 +51,7 @@ function createDirectory(dirPath) {
 }
 
 async function createQuestionAsync(content, filePath) {
-  const formattedContent = await prettier.format(content, {
+  let formattedContent = await prettier.format(content, {
     experimentalTernaries: true,
     printWidth: 80,
     tabWidth: 2,
@@ -71,6 +71,10 @@ async function createQuestionAsync(content, filePath) {
     embeddedLanguageFormatting: "auto",
     singleAttributePerLine: false
   });
+
+
+  formattedContent = formattedContent.replace(/\s*# Q: REPLACE ME\n/g,`${divider20} Question ${divider20}  \n`)
+  formattedContent = formattedContent.replace(/\s*# A: REPLACE ME\n/g,`  \n\n${divider20} Answer ${divider20}  \n`)
 
   // fs.writeFileSync(filePath, formattedContent, 'utf-8');
   await fs.promises.writeFile(filePath, formattedContent);
@@ -181,6 +185,7 @@ let fileContents = fs.readFileSync(filePath, 'utf8');
 fileContents = removeMarkdownIndentation(fileContents);
 
 const divider45 = "=============================================  "
+const divider20 = "===================="
 
 fileContents = fileContents.replace(/={45} *\n*(#{5} )*\s*/g, '')
 // fs.writeFileSync(
@@ -306,8 +311,10 @@ for (let parentPath in questionsHash) {
 
     questionText = questionText.replace(/#{6} ID\d*\s*/g, '')
     const forFilename = questionText.replace(/={45} {2}\n\s*/g,"")
-    questionText = questionText.replace(/={45} {2}\n\s*##/g,"  \n")
-    answerText = answerText.replace(/={45} {2}\n\s*/g,"  \n")
+    // questionText = questionText.replace(/={45} {2}\n\s*##/g,"  \n")
+    questionText = questionText.replace(/Q: ={45} {2}\n\s*##/g,"# Q: REPLACE ME\n")
+    // answerText = answerText.replace(/={45} {2}\n\s*/g,"  \n")
+    answerText = answerText.replace(/A: ={45} {2}\n\s*/g,"# A: REPLACE ME\n")
 
     // questionText = questionText.trim();
     questionText = questionText.replace(doubleSpaceRegex, ``);
@@ -425,7 +432,8 @@ function addJumpLines(text) {
     questionText = questionText.trim();
     questionText = questionText.replace(doubleSpaceRegexCustom, ``);
     //
-    let includeQuestionMark = "?"
+    // let includeQuestionMark = "?"
+    let includeQuestionMark = ""
     const questionTextLastChar = questionText[questionText.length-1]
     if (questionTextLastChar === "?") {
       includeQuestionMark = ""
