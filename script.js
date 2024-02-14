@@ -16,7 +16,7 @@ const chapterRegex = /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|
 const questionRegex = /^Q:: ((?:(?!A::)[\s\S])+)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm
 // const targetDeckRegex =
 //   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
-const targetDeckRegex = /TARGET DECK: ((\w( *|-*))*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g
+const targetDeckRegex = /TARGET DECK: .*/g
 const deckInfoRegex = /---\n\nDECK INFO([\s\S]*)/g;
 const notALineBreakRegex = /^(?![^\S\r\n]*$).*$/gm;
 const notAlfaHyphenRegex = /[^a-zA-Z0-9\-]/gm;
@@ -51,6 +51,17 @@ function createDirectory(dirPath) {
 }
 
 async function createQuestionAsync(content, filePath) {
+
+  // console.log(content)
+  let prevInfo = ""
+  content = content.replace(/---\n\nDECK INFO(.*\n*)*/g, (selectedText) => {
+    prevInfo = selectedText
+    return "DECK INFO GOES HERE"
+  })
+
+  // console.log("-------------")
+  // console.log(prevInfo)
+
   let formattedContent = await prettier.format(content, {
     experimentalTernaries: true,
     printWidth: 80,
@@ -72,6 +83,7 @@ async function createQuestionAsync(content, filePath) {
     singleAttributePerLine: false
   });
 
+  formattedContent = formattedContent.replace(/DECK INFO GOES HERE/g, prevInfo)
 
   formattedContent = formattedContent.replace(/\s*# Q: REPLACE ME\n/g,`${divider20} Question ${divider20}  \n`)
   formattedContent = formattedContent.replace(/\s*# A: REPLACE ME\n/g,`  \n\n${divider20} Answer ${divider20}  \n`)
@@ -130,9 +142,10 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
   const fixMainTitle = pathArray[0].replaceAll(" ", "-").replaceAll("---","-")
   const fixFileName = fileName.replaceAll(" ", "-").replaceAll("---","-")
   const deckDataPlusId = deckData.replace(/(FILE TAGS:.*)/g, `$1::#${fixMainTitle}::#${fixPart}::#${fixChapter}::#${questionsAdded}-${fixFileName}`)
+  const idDivider = `  \n\n${divider20} Id ${divider20}  \n${questionsAdded}`
 
 
-  const content = `${question}  \n${answer}\n${prevId}\n${deckDataPlusId}\n\n${questionState}`;
+  const content = `${question}  \n${answer}${idDivider}\n${prevId}\n${deckDataPlusId}\n${questionState}`;
   //const questionsCount = content.match(questionRegex);
   //console.log(questionsCount);
   //if (questionsCount > 1) {
@@ -182,6 +195,18 @@ parentRoute = parentRoute.join("/")
 
 // Read the file contents
 let fileContents = fs.readFileSync(filePath, 'utf8');
+
+// fileContents = fileContents.replace(/(TARGET DECK:.*)/g, (selectedText) => {
+//   selectedText = selectedText.replaceAll(" ", "-")
+//   selectedText = selectedText.replaceAll("---", "-")
+//   return `TARGET DECK: ${selectedText.substring(13)}`
+// })
+
+fileContents = fileContents.replace(/FILE TAGS:.*/g, (selectedText) => {
+  selectedText = selectedText.replaceAll(" ", "::")
+  return `FILE TAGS: ${selectedText.substring(13)}`
+})
+
 fileContents = removeMarkdownIndentation(fileContents);
 
 const divider45 = "=============================================  "
