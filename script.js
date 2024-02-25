@@ -292,12 +292,12 @@ for (let part of parts) {
 
 //console.log(chaptersHash);
 
-fs.writeFileSync(
-  './bad-questions.md',
-  `# Bad questions\n${invalidQuestions
-    .toString()
-    .replace(chapterTitleRegex, '')}`
-);
+// fs.writeFileSync(
+//   './bad-questions.md',
+//   `# Bad questions\n${invalidQuestions
+//     .toString()
+//     .replace(chapterTitleRegex, '')}`
+// );
 
 
 //fs.writeFileSync('./test.txt', JSON.stringify(chaptersHash, undefined, '\t'));
