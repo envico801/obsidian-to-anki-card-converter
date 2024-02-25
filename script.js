@@ -328,7 +328,7 @@ for (let parentPath in questionsHash) {
   const questions = questionsHash[parentPath];
   for (let question of questions) {
     // if (questionsAdded > 1) {
-    // break;
+    //   break;
     // }
     const questionAndAnswer = question.split('A:: ');
     let answerText = `A: ${questionAndAnswer.pop().trim()}`;
@@ -378,13 +378,13 @@ for (let parentPath in questionsHash) {
 
 
 
-    answerText = answerText.replace(codeBlockStart, (matchText) => {
-      return `${matchText.trim()}`
-    })
-
-    answerText = answerText.replace(codeBlockEnd, (matchText) => {
-      return `${matchText.trim()}`
-    })
+    // answerText = answerText.replace(codeBlockStart, (matchText) => {
+    //   return `${matchText.trim()}`
+    // })
+    //
+    // answerText = answerText.replace(codeBlockEnd, (matchText) => {
+    //   return `${matchText.trim()}`
+    // })
 
     answerText = answerText.trim();
 
