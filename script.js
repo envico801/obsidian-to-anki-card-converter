@@ -207,7 +207,7 @@ fileContents = fileContents.replace(/FILE TAGS:.*/g, (selectedText) => {
   return `FILE TAGS: ${selectedText.substring(13)}`
 })
 
-fileContents = removeMarkdownIndentation(fileContents);
+// fileContents = removeMarkdownIndentation(fileContents);
 
 const divider45 = "=============================================  "
 const divider20 = "===================="
