@@ -1,6 +1,7 @@
-const fs = require('fs');
-const path = require('path');
-const prettier = require('prettier');
+import fs from 'fs';
+import path from 'path';
+import prettier from 'prettier';
+
 let state = null; // "" = "Saved"
 let questionsAdded = 1;
 let questionsCreated = [];
