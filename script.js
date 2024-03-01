@@ -88,6 +88,10 @@ async function createQuestionAsync(content, filePath) {
   formattedContent = formattedContent.replace(/\s*# Q: REPLACE ME\n/g,`${divider20} Question ${divider20}  \n`)
   formattedContent = formattedContent.replace(/\s*# A: REPLACE ME\n/g,`  \n\n${divider20} Answer ${divider20}  \n`)
 
+  // Fix lists
+  const tripleSpaceRegex = /(^ {3,})/gm
+  formattedContent = formattedContent.replace(tripleSpaceRegex, `$1 `)
+
   // fs.writeFileSync(filePath, formattedContent, 'utf-8');
   await fs.promises.writeFile(filePath, formattedContent);
 }
@@ -343,20 +347,33 @@ for (let parentPath in questionsHash) {
 
     // questionText = questionText.trim();
     questionText = questionText.replace(doubleSpaceRegex, ``);
-    questionText = questionText.replace(endOfLineRegex, `  `);
+    // questionText = questionText.replace(endOfLineRegex, `  `);
+    questionText = questionText.replace(endOfLineRegex, `\n`);
     questionText = questionText.trim();
 
-    // if (questionsAdded === 1) {
-      answerText = answerText.replace(doubleSpaceRegex, ``);
-      answerText = answerText.replace(endOfLineRegex, `  `);
+    const selectCodeBlock = /(```[\s\S]*?```)/g
+    const codeblocks = answerText.match(selectCodeBlock)
+    const codeblocksDict = {}
+
+    for (let i = 0; i < codeblocks?.length; i++) {
+      codeblocksDict[i] = codeblocks[i]
+      answerText = answerText.replace(codeblocks[i], `G${i}G`)
+    }
+
+    const everythingExceptTablesBlockquotes = /^(?!(^\s*>\s.+|^\s*\|.*\|$)).+/gm
+    answerText = answerText.replace(everythingExceptTablesBlockquotes, (selectedText) => {
+      // if (questionsAdded === 1) {
+      selectedText = selectedText.replace(doubleSpaceRegex, ``);
+      // answerText = answerText.replace(endOfLineRegex, `  `);
+      selectedText = selectedText.replace(endOfLineRegex, `\n`);
       // answerText = answerText.replace(lastWordRegex, match => `${match}  `);
+      // }
+      return selectedText
+    })
 
-
-    // }
-
-
-
-    // console.log(answerText)
+    for (let numKey in codeblocksDict) {
+      answerText = answerText.replace(`G${numKey}G`, codeblocksDict[numKey])
+    }
 
     const containsImage = answerText.match(markdownImageRegex)
     if (containsImage) {
@@ -378,13 +395,7 @@ for (let parentPath in questionsHash) {
 
 
 
-    // answerText = answerText.replace(codeBlockStart, (matchText) => {
-    //   return `${matchText.trim()}`
-    // })
-    //
-    // answerText = answerText.replace(codeBlockEnd, (matchText) => {
-    //   return `${matchText.trim()}`
-    // })
+    // console.log(answerText)
 
     answerText = answerText.trim();
 
