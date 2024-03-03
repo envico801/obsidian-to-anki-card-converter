@@ -15,6 +15,8 @@ const partRegex = /### Part [IVX]+ - [\s\S]+?(?=(?:### Part [IVX]+ - [\s\S]+?)|\
 const chapterRegex = /#+\s*Chapter \d+[\s\S]*?(?=(### Part|\n#### Chapter|\n---|$))/g;
 // const questionRegex = /^Q:: ((?:.+\n)*)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm;
 const questionRegex = /^Q:: ((?:(?!A::)[\s\S])+)\n*A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm
+const oldQuestionSelectorRegex = /^Q:: ((?:.+\n)*)\n*/gm
+const oldAnswerSelectorRegex = /^A:: (.+(?:\n(?:^.{1,3}$|^.{4}(?<!<!--).*))*)/gm
 // const targetDeckRegex =
 //   /TARGET DECK: (([A-Za-z0-9])*(::)*)* - (([A-Za-z0-9])* ?)* - (([A-Za-z0-9])* ?)*/g;
 const targetDeckRegex = /TARGET DECK: .*/g
@@ -37,7 +39,8 @@ const chapterTitleRegex = /#### Chapter [0-9]+ - .*/g
 const codeBlockStart = / *```[A-Za-z0-9]+(  )*/g
 const codeBlockEnd = / *```(  )*/g
 const nonAlfaNumRegex = /[^a-zA-Z0-9]/g
-const doubleSpaceRegex = /(\?* {2})$/gm
+// const doubleSpaceRegex = /(\?* {2})$/gm
+const doubleSpaceRegex = /( +)$/gm
 const endOfLineRegex = /(\s*)$/gm
 const lastWordRegex = /[^\s]+$/gm;
 let indexTable = `\n| ID | File name / path | Part | Chapter |\n| --- | --- | --- | --- |\n`
@@ -346,58 +349,10 @@ for (let parentPath in questionsHash) {
     // answerText = answerText.replace(/={45} {2}\n\s*/g,"  \n")
     answerText = answerText.replace(/A: ={45} {2}\n\s*/g,"# A: REPLACE ME\n")
 
-    // questionText = questionText.trim();
-    questionText = questionText.replace(doubleSpaceRegex, ``);
-    // questionText = questionText.replace(endOfLineRegex, `  `);
-    questionText = questionText.replace(endOfLineRegex, `\n`);
+    questionText = fixErrorsInText(questionText)
+    answerText = fixErrorsInText(answerText)
+
     questionText = questionText.trim();
-
-    const selectCodeBlock = /(```[\s\S]*?```)/g
-    const codeblocks = answerText.match(selectCodeBlock)
-    const codeblocksDict = {}
-
-    for (let i = 0; i < codeblocks?.length; i++) {
-      codeblocksDict[i] = codeblocks[i]
-      answerText = answerText.replace(codeblocks[i], `G${i}G`)
-    }
-
-    const everythingExceptTablesBlockquotes = /^(?!(^\s*>\s.+|^\s*\|.*\|$)).+/gm
-    answerText = answerText.replace(everythingExceptTablesBlockquotes, (selectedText) => {
-      // if (questionsAdded === 1) {
-      selectedText = selectedText.replace(doubleSpaceRegex, ``);
-      // answerText = answerText.replace(endOfLineRegex, `  `);
-      selectedText = selectedText.replace(endOfLineRegex, `\n`);
-      // answerText = answerText.replace(lastWordRegex, match => `${match}  `);
-      // }
-      return selectedText
-    })
-
-    for (let numKey in codeblocksDict) {
-      answerText = answerText.replace(`G${numKey}G`, codeblocksDict[numKey])
-    }
-
-    const containsImage = answerText.match(markdownImageRegex)
-    if (containsImage) {
-      // console.log(containsImage)
-      // counter++
-      answerText = answerText.replace(markdownImageRegex, (match, p1, p2, p3, p4) => {
-        const dynamicText = p4.split('.').shift(); // Extract the text and remove file extension
-        const relativePath = "../../../../" + (p3 ? p3 + "/" : "") + p4;
-        return `![${dynamicText}](${relativePath})`;
-      });
-      // console.log("++++++++++++++++++++++++++++++++++++++++++++++")
-      // console.log(test)
-    }
-
-    const isTable = tableRegex.exec(answerText)
-    if (isTable) {
-      answerText = answerText.replace(tableRegex, '\n\n$1');
-    }
-
-
-
-    // console.log(answerText)
-
     answerText = answerText.trim();
 
     qandAResolved += `${questionText}\n${answerText}\n\n`;
@@ -602,4 +557,51 @@ function romanToNumber(roman) {
   }
 
   return result;
+}
+
+function fixErrorsInText(text) {
+
+  // questionText = questionText.trim();
+  // questionText = questionText.replace(doubleSpaceRegex, ``);
+
+  // questionText = questionText.replace(endOfLineRegex, `  `);
+  // questionText = questionText.replace(endOfLineRegex, `\n`);
+
+  const selectCodeBlock = /((```|~~~)[\s\S]*?(```|~~~))/g
+  const codeblocks = text.match(selectCodeBlock)
+  const codeblocksDict = {}
+
+  if (codeblocks) {
+    for (let i = 0; i < codeblocks.length; i++) {
+      codeblocksDict[i] = codeblocks[i]
+      text = text.replace(codeblocks[i], `G${i}G`)
+    }
+  }
+
+  const everythingExceptTablesBlockquotes = /^(?!(^\s*>\s.+|^\s*\|.*\|$)).+/gm
+  text = text.replace(everythingExceptTablesBlockquotes, (selectedText) => {
+    selectedText = selectedText.replace(doubleSpaceRegex, ``);
+    selectedText = selectedText.replace(endOfLineRegex, `\n`);
+    return selectedText
+  })
+
+  for (let numKey in codeblocksDict) {
+    text = text.replace(`G${numKey}G`, codeblocksDict[numKey])
+  }
+
+  const containsImage = text.match(markdownImageRegex)
+  if (containsImage) {
+    text = text.replace(markdownImageRegex, (match, p1, p2, p3, p4) => {
+      const dynamicText = p4.split('.').shift(); // Extract the text and remove file extension
+      const relativePath = "../../../../" + (p3 ? p3 + "/" : "") + p4;
+      return `![${dynamicText}](${relativePath})`;
+    });
+  }
+
+  const isTable = tableRegex.exec(text)
+  if (isTable) {
+    text = text.replace(tableRegex, '\n\n$1');
+  }
+
+  return text
 }
