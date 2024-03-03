@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
+import { convertMarkdownCodeblockToHtml } from "./mdUtils.js"
 
 let state = null; // "" = "Saved"
 let questionsAdded = 1;
@@ -54,19 +55,9 @@ function createDirectory(dirPath) {
   }
 }
 
-async function createQuestionAsync(content, filePath) {
+async function createQuestionAsync(content, filePath, fileTypeExit) {
 
-  // console.log(content)
-  let prevInfo = ""
-  content = content.replace(/---\n\nDECK INFO(.*\n*)*/g, (selectedText) => {
-    prevInfo = selectedText
-    return "DECK INFO GOES HERE"
-  })
-
-  // console.log("-------------")
-  // console.log(prevInfo)
-
-  let formattedContent = await prettier.format(content, {
+  const prettierOptions = {
     experimentalTernaries: true,
     printWidth: 80,
     tabWidth: 2,
@@ -80,21 +71,73 @@ async function createQuestionAsync(content, filePath) {
     bracketSameLine: false,
     arrowParens: "always",
     parser: 'markdown',
-    proseWrap: "always",
+    // proseWrap: "always",
     htmlWhitespaceSensitivity: "css",
     vueIndentScriptAndStyle: false,
     embeddedLanguageFormatting: "auto",
     singleAttributePerLine: false
-  });
+  }
 
-  formattedContent = formattedContent.replace(/DECK INFO GOES HERE/g, prevInfo)
+  // console.log(content)
+  let prevInfo = ""
+  content = content.replace(/---\n\nDECK INFO(.*\n*)*/g, (selectedText) => {
+    prevInfo = selectedText
+    return "DECK INFO GOES HERE"
+  })
+  const codeblockStartTag = "<!-- codeblock-start -->"
+  const codeblockEndTag = "<!-- codeblock-end -->"
+
+  // console.log("-------------")
+  // console.log(prevInfo)
+
+  if (fileTypeExit === "htmlCodeBlocks"){
+
+    let filePathParts = filePath.split('/');
+
+    filePathParts.splice(2, 1, `HTML - ${filePathParts[2]}`);
+    filePath = path.join(...filePathParts)
+
+  } else {
+    const wholeCodeBlockRegex = /( *(```|~~~)[^]*?(```|~~~))/g
+
+    content = content.replace(wholeCodeBlockRegex, `\n$1\n`)
+
+    // Limit line length in .md files
+    prettierOptions["proseWrap"] = "always"
+  }
+
+  // Format with Prettier
+  let formattedContent = await prettier.format(content, prettierOptions);
 
   formattedContent = formattedContent.replace(/\s*# Q: REPLACE ME\n/g,`${divider20} Question ${divider20}  \n`)
   formattedContent = formattedContent.replace(/\s*# A: REPLACE ME\n/g,`  \n\n${divider20} Answer ${divider20}  \n`)
 
+  const codeblockRegex = /( *)(```+|~~~+)(?: *)([^\s`~]*)\n([\s\S]*?)\n*\2/g
+
+  if (fileTypeExit === "htmlCodeBlocks") {
+    formattedContent = formattedContent.replace(codeblockRegex, (selectedText, whitespace, delim) => {
+      selectedText = selectedText.replace(/((```+|~~~+).*)/g,(wholeMatch, delim) => {
+        if (wholeMatch.length > 3) return `${delim}\n`
+
+        return `\n${delim}`
+      })
+      let htmlCodeText = convertMarkdownCodeblockToHtml(selectedText, whitespace)
+      const markedText = `${whitespace}${codeblockStartTag}\n${whitespace}${htmlCodeText.trim()}\n${whitespace}${codeblockEndTag}`
+      // const markedText = `${whitespace}${htmlCodeText.trim()}`
+
+      return markedText
+    })
+  } else {
+    formattedContent = formattedContent.replace(`${divider20} Question ${divider20}`, `${"=".repeat(10)} Question ${"=".repeat(10)}`)
+    formattedContent = formattedContent.replace(`${divider20} Answer ${divider20}`, `${"=".repeat(10)} Answer ${"=".repeat(10)}`)
+    formattedContent = formattedContent.replace(`${divider20} Id ${divider20}`, `${"=".repeat(10)} Id ${"=".repeat(10)}`)
+  }
+
   // Fix lists
   const tripleSpaceRegex = /(^ {3,})/gm
   formattedContent = formattedContent.replace(tripleSpaceRegex, `$1 `)
+
+  formattedContent = formattedContent.replace(/DECK INFO GOES HERE/g, prevInfo)
 
   // fs.writeFileSync(filePath, formattedContent, 'utf-8');
   await fs.promises.writeFile(filePath, formattedContent);
@@ -161,7 +204,8 @@ function createQuestionFile(filePath, question, answer, deckData, fileName) {
   //}
   //console.log(filePath);
 
-  createQuestionAsync(content,filePath)
+  createQuestionAsync(content,filePath, "markdown")
+  createQuestionAsync(content,filePath, "htmlCodeBlocks")
 
   //fs.writeFile(filePath, content, { flag: 'w' }, function (err) {
   //if (err) return console.error(err);
@@ -260,10 +304,13 @@ if (!mainFolderName) {
 mainFolderName = sanitizeFilename(mainFolderName)
 mainFolderName = mainFolderName.replace(multipleSpacesRegex, " ")
 
+let mainFolderNameHTML = `HTML - ${mainFolderName}`
 mainFolderName = path.join(parentRoute, mainFolderName);
+mainFolderNameHTML = path.join(parentRoute, mainFolderNameHTML);
 //console.log(mainFolderName);
 
 createDirectory(mainFolderName);
+createDirectory(mainFolderNameHTML);
 
 let invalidQuestions = [];
 
@@ -294,7 +341,9 @@ for (let part of parts) {
     partTitle = partTitle.substring(0,70)
     chaptersHash[partTitle] = chaptersInPart;
     const parentPath = path.join(mainFolderName, partTitle);
+    const parentPathHTML = path.join(mainFolderNameHTML, partTitle);
     createDirectory(parentPath);
+    createDirectory(parentPathHTML);
   }
 }
 
@@ -323,7 +372,9 @@ for (let partTitle in chaptersHash) {
       chapterTitle = chapterTitle.replace(multipleSpacesRegex, " ")
       chapterTitle = chapterTitle.substring(0,70)
       const parentPath = path.join(mainFolderName, partTitle, chapterTitle);
+      const parentPathHTML = path.join(mainFolderNameHTML, partTitle, chapterTitle);
       createDirectory(parentPath);
+      createDirectory(parentPathHTML);
       questionsHash[parentPath] = questionsInChapter ? questionsInChapter : [];
     }
   }
