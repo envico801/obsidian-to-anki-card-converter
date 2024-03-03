@@ -410,57 +410,59 @@ fs.writeFile(filePath, fileContents, function(err) {
 function addJumpLines(text) {
   text = convertImages(text)
   let count = 1
-  text = text.replace(questionRegex, (selectedText) => {
-    const question = selectedText.match(questionRegex)[0];
-    const questionAndAnswer = question.split('A:: ');
+  // text = text.replace(questionRegex, (selectedText) => {
+  //   const question = selectedText.match(questionRegex)[0];
+  //   const questionAndAnswer = question.split('A:: ');
+  //
+  //   let questionText = questionAndAnswer[0];
 
-    let questionText = questionAndAnswer[0];
     // if (count === 1) {
     //   console.log(questionText)
     // }
 
-    let doubleSpaceRegexCustom = /( *)$/gm;
+    // let doubleSpaceRegexCustom = /( *)$/gm;
+    // let myPersonalDoubleSpace = /( {2,})$/gm
 
-    questionText = questionText.trim();
-    questionText = questionText.replace(doubleSpaceRegexCustom, ``);
+    // questionText = questionText.trim();
+    // questionText = questionText.replace(doubleSpaceRegex, ``);
+    // questionText = questionText.replace(endOfLineRegex, `  `);
     //
     // let includeQuestionMark = "?"
-    let includeQuestionMark = ""
-    const questionTextLastChar = questionText[questionText.length-1]
-    if (questionTextLastChar === "?") {
-      includeQuestionMark = ""
-    }
-    questionText.trim()
-    questionText += `${includeQuestionMark}\n`
-    questionText = questionText.replace(/(.+)$/gm, "$1  ");
+
+    // let includeQuestionMark = ""
+    // const questionTextLastChar = questionText[questionText.length-1]
+    // if (questionTextLastChar === "?") {
+    //   includeQuestionMark = ""
+    // }
+    // questionText.trim()
+    // questionText += `${includeQuestionMark}\n`
+    // questionText = questionText.replace(/(.+)$/gm, "$1  ");
 
     // questionText = questionText.replace(lastWordRegex, match => `${match}  `);
 
-    let answerText = questionAndAnswer[1];
+    // let answerText = questionAndAnswer[1];
       // if (count === 1) {
       //   console.log(answerText)
       // }
 
     // if (count === 1) {
     //   console.log('=====================================')
+    //   console.log(questionText)
     //   console.log(answerText)
     //   console.log('=====================================')
     //   count++
     // }
 
-    answerText = answerText.replace(doubleSpaceRegex, ``);
-    answerText = answerText.replace(endOfLineRegex, `  `);
+    // answerText = answerText.replace(doubleSpaceRegex, ``);
+    // answerText = answerText.replace(endOfLineRegex, `  `);
     // answerText = answerText.replace(lastWordRegex, match => `${match}  `);
 
-    const isTable = tableRegex.exec(answerText)
-    if (isTable) {
-       answerText = answerText.replace(tableRegex, '\n\n$1');
-    }
+    // const isTable = tableRegex.exec(answerText)
+    // if (isTable) {
+    //    answerText = answerText.replace(tableRegex, '\n\n$1');
+    // }
 
     // answerText = answerText.replace(/A::( -*-)*/g, 'A:: -*-\n')
-
-    answerText = answerText.trim();
-
 
     // console.log(test)
 
@@ -474,14 +476,48 @@ function addJumpLines(text) {
     //   ++count
     // }
 
-    questionText = questionText.substring(4)
-    const id = `###### ID${count++}`
-    const returned = `Q:: ${divider45}\n\n##### ${questionText}\n${id}\n\nA:: ${divider45}\n${answerText}`
+    // questionText = fixErrorsInTextV2(questionText)
+    // questionText = questionText.trim();
+    // answerText = fixErrorsInTextV2(answerText)
+    // answerText = answerText.trim();
+
+    // questionText = questionText.substring(4)
+    // const id = `###### ID${count++}`
+    // const returned = `Q:: ${divider45}\n\n##### ${questionText}\n${id}\n\nA:: ${divider45}\n${answerText}`
     // console.log(divider45)
     // console.log(returned)
 
-    return returned;
-  });
+  //   return returned;
+  // });
+
+  text = text.replace(oldQuestionSelectorRegex, (selectedText) => {
+    // if (count === 1) {
+    //   console.log(seletedText)
+    // }
+    selectedText = fixErrorsInTextV2(selectedText)
+    //
+    selectedText = selectedText.substring(4)
+    selectedText = `Q:: ${divider45}\n\n##### ${selectedText}`
+    return selectedText
+  })
+
+  const idPositionSelector = /(^Q:: ((?:(?!A::)[\s\S])+)\n*)/gm
+
+  text = text.replace(idPositionSelector, (selectedText) => {
+    const id = `###### ID${count++}`
+    selectedText = `${selectedText}${id}\n\n`
+    return selectedText
+  })
+
+  text = text.replace(oldAnswerSelectorRegex, (selectedText) => {
+    // if (count === 1) {
+    //   console.log(seletedText)
+    // }
+    selectedText = fixErrorsInTextV2(selectedText)
+    selectedText = selectedText.substring(4)
+    selectedText = `A:: ${divider45}\n${selectedText.trim()}`
+    return selectedText
+  })
 
   return text;
 }
@@ -596,6 +632,39 @@ function fixErrorsInText(text) {
       const relativePath = "../../../../" + (p3 ? p3 + "/" : "") + p4;
       return `![${dynamicText}](${relativePath})`;
     });
+  }
+
+  const isTable = tableRegex.exec(text)
+  if (isTable) {
+    text = text.replace(tableRegex, '\n\n$1');
+  }
+
+  return text
+}
+
+function fixErrorsInTextV2 (text) {
+  const selectCodeBlock = /(```|~~~[\s\S]*?```|~~~)/g
+  const codeblocks = text.match(selectCodeBlock)
+  const codeblocksDict = {}
+
+  if (codeblocks) {
+    for (let i = 0; i < codeblocks.length; i++) {
+      codeblocksDict[i] = codeblocks[i]
+      text = text.replace(codeblocks[i], `G${i}G`)
+    }
+  }
+
+  const everythingExceptTablesBlockquotes = /^(?!(^\s*>\s.+|^\s*\|.*\|$)).+/gm
+  text = text.replace(everythingExceptTablesBlockquotes, (selectedText) => {
+    selectedText = selectedText.replace(/(\s+)$/gm, ``);
+    selectedText = selectedText.replace(endOfLineRegex, `\n`);
+    return selectedText
+  })
+
+  text = text.replace(/\n{3,}/gm, `\n\n`)
+
+  for (let numKey in codeblocksDict) {
+    text = text.replace(`G${numKey}G`, codeblocksDict[numKey])
   }
 
   const isTable = tableRegex.exec(text)
