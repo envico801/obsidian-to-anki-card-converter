@@ -59,7 +59,7 @@ async function createQuestionAsync(content, filePath, fileTypeExit) {
 
   const prettierOptions = {
     experimentalTernaries: true,
-    printWidth: 80,
+    // printWidth: 80,
     tabWidth: 2,
     useTabs: false,
     semi: true,
@@ -97,6 +97,7 @@ async function createQuestionAsync(content, filePath, fileTypeExit) {
     filePathParts.splice(2, 1, `HTML - ${filePathParts[2]}`);
     filePath = path.join(...filePathParts)
 
+    prettierOptions["printWidth"] = 200
   } else {
     const wholeCodeBlockRegex = /( *(```|~~~)[^]*?(```|~~~))/g
 
@@ -121,8 +122,11 @@ async function createQuestionAsync(content, filePath, fileTypeExit) {
 
         return `\n${delim}`
       })
+      // console.log(selectedText)
       let htmlCodeText = convertMarkdownCodeblockToHtml(selectedText, whitespace)
+      // console.log(htmlCodeText)
       const markedText = `${whitespace}${codeblockStartTag}\n${whitespace}${htmlCodeText.trim()}\n${whitespace}${codeblockEndTag}`
+      // console.log(markedText)
       // const markedText = `${whitespace}${htmlCodeText.trim()}`
 
       return markedText

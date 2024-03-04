@@ -48,7 +48,7 @@ export function replaceTextWithIndentation(originalText, indentation) {
     const spanIndentation = replacedText.match(firstSpanWithIndentationRegex)
 
     if (spanIndentation) {
-        replacedText = replacedText.replace(codeTagRegex, `$1\n${spanIndentation}`)
+        replacedText = replacedText.replace(codeTagRegex, `$1\n`)
     }
 
     return replacedText
