@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.5.1](https://github.com/envico801/obsidian-to-anki-card-converter/compare/v1.0.0...v2.5.1) (2024-03-04)
+
+
+### Features
+
+* add HTML conversion capability. ([593642c](https://github.com/envico801/obsidian-to-anki-card-converter/commit/593642c9933e11e13764ca4bdaa0b775e27e73b1))
+* upgrade to ESM modules. ([0fa1f40](https://github.com/envico801/obsidian-to-anki-card-converter/commit/0fa1f40ede20835b0f244359373e62a11897eb92))
+
+
+### Bug Fixes
+
+* body of questions to be created. ([eccb8bb](https://github.com/envico801/obsidian-to-anki-card-converter/commit/eccb8bb906af761700ffe087e9c72c19c9e4d54d))
+* correction of indentation problems. ([00e5e4e](https://github.com/envico801/obsidian-to-anki-card-converter/commit/00e5e4e988fef5ee342823ee9bd37631833588c5))
+* disable block format. ([006260e](https://github.com/envico801/obsidian-to-anki-card-converter/commit/006260e322410f08803da7bd53b30347bd6ef714))
+* disable the function to control indentation. ([8898bf7](https://github.com/envico801/obsidian-to-anki-card-converter/commit/8898bf7f23ff8e0a2f8721f309012b62513c789e))
+* html formatting problems. ([49c15b4](https://github.com/envico801/obsidian-to-anki-card-converter/commit/49c15b486f20a05ccfa44c42f3e737f41ff3f8bc))
+* master file format. ([792b937](https://github.com/envico801/obsidian-to-anki-card-converter/commit/792b9375d1cfea45b887af110b96d16451fbb0e8))
+
 ## 1.0.0 (2024-02-15)
 
 
