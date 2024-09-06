@@ -60,7 +60,7 @@ async function createQuestionAsync(content, filePath, fileTypeExit) {
   const prettierOptions = {
     experimentalTernaries: true,
     // printWidth: 80,
-    tabWidth: 2,
+    tabWidth: 4,
     useTabs: false,
     semi: true,
     singleQuote: true,
@@ -138,8 +138,8 @@ async function createQuestionAsync(content, filePath, fileTypeExit) {
   }
 
   // Fix lists
-  const tripleSpaceRegex = /(^ {3,})/gm
-  formattedContent = formattedContent.replace(tripleSpaceRegex, `$1 `)
+  // const tripleSpaceRegex = /(^ {3,})/gm
+  // formattedContent = formattedContent.replace(tripleSpaceRegex, `$1 `)
 
   formattedContent = formattedContent.replace(/DECK INFO GOES HERE/g, prevInfo)
 
