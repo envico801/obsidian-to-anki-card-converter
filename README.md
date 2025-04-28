@@ -12,7 +12,9 @@ It works in conjunction with [Obsidian](https://obsidian.md/) and the plugin to 
 
 You should have a file similar to mine, for example this one [README.md](https://github.com/envico801/Master-the-Coding-Interview-Data-Structures-Algorithms/blob/main/anki/README.md)
 
-`node ./script.js <file-name>.md`
+**Important: i dont remember why, but the folder structure is necesary in that specific order, a folder inside another folder and then inside that second folder the script, folder names, markdown names and script names dont matter, just pay attention a the syntax that im using in my own markdown files, usually marked with "#" header symbols and questions and answers with "Q::" "A::"**
+
+`node ./script.js ./folder1/folder2/<file-name>.md`
 
 e.g.
 
